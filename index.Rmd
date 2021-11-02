@@ -19,7 +19,7 @@ tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
 
 ## Data Wrangling, Exploration, Visualization
 
-### Name and EID here
+### Deanna Mendoza dfm692
 
 #### Introduction 
 
@@ -28,6 +28,13 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 ```{R}
 # read your datasets in here, e.g., with read_csv()
 
+library(tidyverse)
+#install.packages("openintro")
+#install.packages("stevedata")
+unempl <- openintro::unempl
+sealevels <- stevedata::sealevels	
+presidents <- openintro::midterms_house
+
 ```
 
 #### Tidying: Reshaping
@@ -35,57 +42,114 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 If your datasets are tidy already, demonstrate that you can reshape data with pivot wider/longer here (e.g., untidy and then retidy). Alternatively, it may be easier to wait until the wrangling section so you can reshape your summary statistics. Note here if you are going to do this.
 
 ```{R}
-# your tidying code (if applicable; can also wait until wrangling section)
+# will do in wrangling section, my data is already tidy
+
 ```
 
     
 #### Joining/Merging
 
 ```{R}
-# your joining code
 
-# your joining code
+unemplsea <- inner_join(unempl, sealevels, by="year")
+
+full_data <- inner_join(unemplsea, presidents, by="year")
+
 ```
 
-Discussions of joining here. Feel encouraged to break up into more than once code chunk and discuss each in turn.
+*I first decided to do an inner join between "unempl" and "sealevels" because they had the most similar years in their data sets. "unempl" started with 121 obs. and 3 columns and "sealevels" started with 136 obs. and 5 columns. The inner joined data resulted in 121 obs. with 7 columns or variables. I decided to do an inner join so I can see which years are present in both datasets.*
+
+*I then joined a third data set with this inner joined dataset. I joined "presidents" to "unemplsea." "presidents" had 31 obs. and 5 columns originally. The full data resulted in 28 obs. and 11 variables. I decided to do an inner join so I can see which years are present in all three datasets. I could have done a full join to have more years to observe, but I think unemployment rates are more significant to associate with a president and observe the change from term to term.*
 
 ####  Wrangling
 
 ```{R}
-# your wrangling code
+#Some tidying
 
-# your wrangling code
+full_data2 <- full_data%>%select(-unemp.y)
+full_data3 <- full_data2%>%pivot_wider(names_from = "party", values_from = "unemp.x")
 
-# your wrangling code
+# 6 core functions
+
+# filter, select 
+full_data%>%filter(party == "Republican")%>%select(year, party, potus, unemp.x)
+
+
+# group_by, arrange, summarize
+full_data%>%group_by(party)%>%summarize(rate= mean(unemp.x))%>%arrange(desc(rate))
+
+# mutate 
+full_data_range <- full_data%>%mutate('range' = ub-lb)
+
+#strfunction
+full_data2%>%slice_max(str_length(potus))
+
 ```
 
-Your discussion of wrangling section here. Feel encouraged to break up into more than once code chunk and discuss each in turn.
+*When wrangling this data, using the simple functions first, the most interesting data I found was the two parties having similar unemployment rates. I also found through string functions that George Herbert Walker Bush is the president with the longest name.*
 
+```{R}
+#summarize with 5 different functions
+
+full_data2%>%group_by(party)%>%summarize(n())
+full_data2%>%group_by(potus)%>%summarize(n())
+
+means = full_data_range%>%summarize(mean(ub), mean(lb), mean(range))
+
+full_data_range%>%summarize(sd(ub), sd(lb), sd(range))
+
+full_data2%>%group_by(party)%>%summarize(mean(unemp.x))
+
+full_data2%>%group_by(party)%>%summarize(min(unemp.x), max(unemp.x))
+
+house_change1 = full_data2%>%summarize(median(house_change))
+
+full_data2%>%summarize(sum(us_data == 1))
+
+library(knitr)
+
+means %>% kable(digits = 3, align = 'c', col.names=str_to_title(names(.)),caption = "Means of different Bounds of Sea Levels (inches)")
+
+
+```
+   
+*When summarizing this data, I decided to find the mean of the upper bound, lower bound, and range of sea level. This gives the viewer a good idea of the average of whats expected throughout the years. I then decided to count how many presidents there were of each party- 12 Democrat and 16 Republican. I also counted how many terms a president served. FDR was the one whom served the most with 3 times! I also found it quite interesting how both parties had generally the same mean unemployment rates over the years. However, Democratic presidents had the highest max unemployment rate of 19.5%. Although, this was during the time of Great Depression so it was unprecedented! 17 of the unemployment values were from the Bureau of Labor Statistics.*
 
 #### Visualizing
 
 ```{R}
-# your plot 1
+ggplot(full_data2, aes(x=year, y= lb, fill=party)) + geom_point() +scale_y_log10() + geom_smooth(method="lm") +facet_grid(party~.) +theme(axis.text.x=element_text(angle=60, hjust=1))+
+  xlab("Year") + 
+  ylab("Lower Bound of Sea Level(inches)") +
+  ggtitle("Lower Bound of Sea Level Years under Different Parties") + theme_linedraw()
 ```
 
-Your discussion of plot 1
+*This plot shows how the different parties have different lower bounds of sea levels over the years. Both parties showed an increase in lower bound sea level over the years so there was a general upward trend.*
 
 ```{R}
-# your plot 2
+
+p <- ggplot(data = full_data2)
+
+p + geom_density(aes(x=unemp.x, fill = party)) +
+  scale_y_continuous(breaks=seq(0,.2,.02), labels=c("0",".02",".04",".06",".08",".1",  ".12",".14",".16",".18",".2")) +
+  xlab("Year") + 
+  ylab("Rate of Unemployment") +
+  ggtitle("Rate of Unemployment over the Years under Different Parties") +theme(axis.text.x=element_text(angle=60, hjust=1)) +theme_dark()
+
 ```
 
-Your discussion of plot 2
+*This plot shows the relationship between unemployment and each party. There is a large overlap between the unemployment of the two parties so there is not a huge correlation between one party and the unemployment rate. The sudden spikes in unemployment due to the social climate or the time.*
 
 ```{R}
-# your plot 3
-```
 
-Your discussion of plot 3
+ggplot(full_data2, aes(year, house_change, color=party))+geom_point()+xlab("Year") + 
+  ylab("House Change (%)") +
+  scale_y_continuous(labels=scales::percent)+
+  ggtitle("Changes in House seats over the Years") +theme_bw()
+
+```
+*From this plot I conclude that the the change in house seats for the elected president's party has no exact trend for each party. It seems pretty sporadic and random among the years.*
 
 #### Concluding Remarks
 
-If any!
-
-
-
-
+*Overall I learned that unemployment and the specific party in charge does not makea  huge difference. What's most important in effecting the unemployment is the social events occurring like the Great Depression. I also found that there is a large house change each year when the presidential candidate is a new party from the previous. I learned some new things from this project!*
